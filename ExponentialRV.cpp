@@ -61,6 +61,7 @@ using namespace std;
    {
       return this->upperLimit;
    }
+
    // possible extension here to allow for PDF evaluation here as well
    bool ExponentialRV::generatePoints (size_t numberOfPoints, vector<double> &data)
    {
@@ -68,21 +69,29 @@ using namespace std;
 
       for (int i = 0; i < numberOfPoints; i++)
       {
-         //TODO: Improve this as it favors lower bound numbers right now.. 
-         //but it should be fine for generating numbers between 0 and 1.
-         double x_input = (double)rand()/((double)(RAND_MAX)); //generates number between 0 and 1
-         //x_input = x_input % upperLimit;
-         x_input += lowerLimit; //ensure number is within the domain!
+         // generate a number between 0 and 1
+         double x_input = (double)rand()/RAND_MAX; //generates number between 0 and 1
+         double upper = 1 - (exp(-1 * lambda * upperLimit));
+         double lower = 1 - (exp(-1 * lambda * lowerLimit));
+         double tmp = lower + (upper - lower) * x_input;
+         double result;
+         cumulativeProbability(tmp, result);
+         data.push_back(result);
 
+         /*// use the number as a percentage and insert into domain 
+         x_input *= (upperLimit - lowerLimit);
+         x_input += lowerLimit; //ensure number is within the domain
+         cout << "input: " << x_input << endl;
       double tmp;
          if(!(this->cumulativeProbability(x_input, tmp)))
             return false;
+         cout << "tmp" << tmp << endl;
+      data.push_back(tmp);
 
-         data.push_back(tmp);
+         */
 
       }
 
-     // float ret = (double)(-1 * (log(1 - random)/lambda));
       return true;
    }
 
@@ -109,7 +118,7 @@ using namespace std;
       return ((double)1/lambda);
    }
 
-   double ExponentialRV::mean(size_t numberOfPoints)
+   double ExponentialRV::mean(vector<double>::size_type numberOfPoints)
    {
       if (numberOfPoints == 0)
          return 0;
@@ -121,11 +130,11 @@ using namespace std;
       return mean(data, numberOfPoints);
    }
 
-   double ExponentialRV::mean(const vector<double> &data, size_t size)
+   double ExponentialRV::mean(const vector<double> &data, vector<double>::size_type size)
    {
-      double sum = 5;
+      double sum = 0;
 
-      for (std::vector<int>::size_type i = 0; i < data.size(); i++)
+      for (auto i = 0; i < data.size(); i++)
          sum += data[i];
 
       cout << sum << endl;
@@ -148,12 +157,14 @@ using namespace std;
       return variance(data, numberOfPoints);
    }
 
-   double ExponentialRV::variance(const vector<double> &data, size_t size)
+   double ExponentialRV::variance(const vector<double> &data, vector<double>::size_type size)
    {
       double sum = 0;
       double avg =  mean(data, size);
 
-      for(int i = 0; i < data.size(); i++)
+      cout << "AVG: " << avg << endl;
+
+      for(auto i = 0; i < data.size(); i++)
          sum += pow(data[i] - avg, 2);
       
       return sum/(size - 1);
