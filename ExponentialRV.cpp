@@ -3,26 +3,55 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <string>
 
 #include <iostream>
 
 using namespace std;
 
+   /*
+   * constructor with one input.
+   * inputs
+   * @lambda: the defining parameter for an exponential distribution 
+   */
    ExponentialRV::ExponentialRV (int lambda)
-   : RandomVariable()
    {
       this->lambda = lambda;
-      //upper and lower limits of function set by default parent constructor
+      //upper and lower limits of theoretical RV
+      maxUpperLimit = std::numeric_limits<double>::infinity();
+      minLowerLimit = 0;
+
+      upperLimit = maxUpperLimit;
+      lowerLimit = minLowerLimit;
+      
    }
 
+   /*
+   * constructor with three inputs.
+   * inputs
+   * @lambda: the defining parameter for an exponential distribution
+   * @lowerLimit: lower restriction on domain 
+   * @upperLimit: upper restriction on domain 
+   */
    ExponentialRV::ExponentialRV (int lambda, double lowerLimit, double upperLimit)
    : RandomVariable(lowerLimit, upperLimit)
    {
       this->lambda = lambda;
+      //upper and lower limits of theoretical RV
+      maxUpperLimit = std::numeric_limits<double>::infinity();
+      minLowerLimit = 0;
       //call super constructor with the two limits to set the domain
    }
 
-   bool ExponentialRV::setUpperDomain(double upperLimit)
+   /*
+   * Setter method for upper limit for PDF/CDF function. If illegal value is
+   * provided, then the domain defaults to the global const maxUpperLimit.
+   * inputs
+   * @upperLimit: upper restriction on PDF/CDF function
+   * returns
+   * @bool: true if value is legal and set, false otherwise
+   */
+   bool ExponentialRV::setUpperLimit(double upperLimit)
    {
       if (upperLimit < maxUpperLimit && upperLimit >= lowerLimit)
       {
@@ -32,7 +61,15 @@ using namespace std;
       return false;
    }
 
-   bool ExponentialRV::setLowerDomain(double lowerLimit)
+   /*
+   * Setter method for lower limit for PDF/CDF function. If illegal value is
+   * provided, then the domain defaults to the global const minLowerLimit.
+   * inputs
+   * @lowerLimit: lower restriction on PDF/CDF function
+   * returns
+   * @bool: true if value is legal and set, false otherwise
+   */
+   bool ExponentialRV::setLowerLimit(double lowerLimit)
    {
       if (lowerLimit > minLowerLimit && lowerLimit <= upperLimit)
       {
@@ -42,74 +79,109 @@ using namespace std;
       return false;
    }
 
+   /*
+   * Setter method for domain for PDF/CDF function. If illegal values are
+   * provided, then the domain defaults to the global consts for max upper
+   * and lower bounds.
+   * inputs
+   * @lowerLimit: lower restriction on PDF/CDF function to be applied
+   * @upperLimit: upper restriction on PDF/CDF to be applied
+   * returns
+   * @bool: true if values are legal and set, false otherwise
+   */
    bool ExponentialRV::setDomain(double lowerLimit, double upperLimit)
    {
       if (upperLimit < lowerLimit || lowerLimit < minLowerLimit || upperLimit > maxUpperLimit)
-         return false;   //unable to set due to bounds error
+         return false; 
 
       this->lowerLimit = lowerLimit;
       this->upperLimit = upperLimit;
       return true;
    }
 
+   /*
+   * Getter method for lower domain of PDF/CDF functions
+   */
    double ExponentialRV::getLowerDomain()
    {
       return this->lowerLimit;
    }
 
+   /*
+   * Getter method for upper domain of PDF/CDF functions
+   */
    double ExponentialRV::getUpperDomain()
    {
       return this->upperLimit;
    }
 
-   // possible extension here to allow for PDF evaluation here as well
-   bool ExponentialRV::generatePoints (size_t numberOfPoints, vector<double> &data)
+   /*
+   * Private method that generates a specified number of uniformly distributed points
+   * in the random variable's domain. These points can be used to evaluate the function.
+   * inputs
+   * @numberOfPoints: total number of points to generate
+   * returns
+   * @data: vector of uniformly distributed points 
+   */
+   vector<double> ExponentialRV::generatePoints (vector<double>::size_type numberOfPoints)
    {
       srand(time(NULL));
 
-      for (int i = 0; i < numberOfPoints; i++)
+      double lower = lowerLimit;
+      double upper = upperLimit;
+
+      vector<double> data(numberOfPoints);
+
+      for (auto i = 0u; i < numberOfPoints; i++)
       {
-         // generate a number between 0 and 1
-         double x_input = (double)rand()/RAND_MAX; //generates number between 0 and 1
-         double upper = 1 - (exp(-1 * lambda * upperLimit));
-         double lower = 1 - (exp(-1 * lambda * lowerLimit));
-         double tmp = lower + (upper - lower) * x_input;
-         double result;
-         cumulativeProbability(tmp, result);
+         //generates number between 0 and 1
+         double x_input = (double)rand()/RAND_MAX; 
+         // adjust the data to fit within the domain
+         double result = lower + (upper - lower) * x_input;
          data.push_back(result);
+      }
+      return data;
+   }
 
-         /*// use the number as a percentage and insert into domain 
-         x_input *= (upperLimit - lowerLimit);
-         x_input += lowerLimit; //ensure number is within the domain
-         cout << "input: " << x_input << endl;
-      double tmp;
-         if(!(this->cumulativeProbability(x_input, tmp)))
-            return false;
-         cout << "tmp" << tmp << endl;
-      data.push_back(tmp);
+   vector<double> ExponentialRV::generatePoints_pdf(vector<double>::size_type numberOfPoints)
+   {
+      vector<double> data = generatePoints(numberOfPoints);
 
-         */
-
+      for (auto i = 0u; i < numberOfPoints; i++)
+      {
+         pdf(data[i], data[i]);
       }
 
-      return true;
+      return data;
    }
 
-   bool ExponentialRV::cumulativeProbability (double x_value, double& data)
+   vector<double> ExponentialRV::generatePoints_cdf(vector<double>::size_type numberOfPoints)
+   {
+      vector<double> data = generatePoints(numberOfPoints);
+
+      for (auto i = 0u; i < numberOfPoints; i++)
+      {
+         cdf(data[i], data[i]);
+      }
+
+      return data;
+   }
+
+   bool ExponentialRV::cdf (double x_value, double& data)
    {
       if (x_value < lowerLimit || x_value > upperLimit)
          return false;
 
-      data = (double)(-1 * (log(1 - x_value)/lambda));
+      data = 1 - exp(-1 * lambda * x_value);
       return true;
    }
 
-   bool ExponentialRV::probabilityAt (double x_value, double& data)
+   bool ExponentialRV::pdf (double x_value, double& data)
    {
       if (x_value < lowerLimit || x_value > upperLimit)
          return false;
 
-      data = ((double)(-1)/(pow(lambda,2))) * log(x_value);
+      data = lambda * exp(-1 * lambda * x_value);
       return true;
    }
 
@@ -123,9 +195,7 @@ using namespace std;
       if (numberOfPoints == 0)
          return 0;
 
-      vector<double> data(numberOfPoints);
-      generatePoints(numberOfPoints, data);
-  
+      vector<double> data = generatePoints(numberOfPoints);
 
       return mean(data, numberOfPoints);
    }
@@ -134,10 +204,9 @@ using namespace std;
    {
       double sum = 0;
 
-      for (auto i = 0; i < data.size(); i++)
+      for (auto i = 0u; i < data.size(); i++)
          sum += data[i];
 
-      cout << sum << endl;
       return sum/(double)size;
    }
 
@@ -146,13 +215,12 @@ using namespace std;
       return 1/(float)(pow(lambda,2));
    }
 
-   double ExponentialRV::variance(size_t numberOfPoints)
+   double ExponentialRV::variance(vector<double>::size_type numberOfPoints)
    {
       if (numberOfPoints <= 0)
          return 0;
 
-      vector<double> data(numberOfPoints);
-      generatePoints(numberOfPoints, data);
+      vector<double> data = generatePoints(numberOfPoints);
 
       return variance(data, numberOfPoints);
    }
@@ -162,9 +230,7 @@ using namespace std;
       double sum = 0;
       double avg =  mean(data, size);
 
-      cout << "AVG: " << avg << endl;
-
-      for(auto i = 0; i < data.size(); i++)
+      for(auto i = 0u; i < data.size(); i++)
          sum += pow(data[i] - avg, 2);
       
       return sum/(size - 1);

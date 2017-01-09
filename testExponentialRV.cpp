@@ -10,7 +10,7 @@ int main()
    cout << "LowerDomain:" << rv->getLowerDomain() << endl;
 
    vector <double> randomPoints;
-   rv->generatePoints(1000, randomPoints);
+   //rv->generatePoints(1000, randomPoints);
 
    cout << "Theoretical Variance: " << rv->mean() << endl;
 
